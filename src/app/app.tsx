@@ -32,7 +32,7 @@ type IntentionData = {
   canGraduate: boolean;
 };
 
-export function App({ user }: { user: { id: string; name: string } }) {
+export function App({ user }: { user: { id: string; name: string; avatar: string | null } }) {
   const [data, setData] = useState<IntentionData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -72,7 +72,7 @@ export function App({ user }: { user: { id: string; name: string } }) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <CraftScreen userName={user.name} onComplete={fetchData} />
+            <CraftScreen userName={user.name} avatar={user.avatar} onComplete={fetchData} />
           </motion.div>
         ) : (
           <motion.div
@@ -92,6 +92,7 @@ export function App({ user }: { user: { id: string; name: string } }) {
               checkedInToday={data.checkedInToday}
               todayResult={data.todayResult}
               canGraduate={data.canGraduate}
+              avatar={user.avatar}
               onCheckIn={fetchData}
             />
           </motion.div>

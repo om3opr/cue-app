@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ProfileMenu } from "../profile-menu";
 
 type Message = {
   role: "user" | "assistant";
@@ -16,9 +17,11 @@ type Intention = {
 
 export function CraftScreen({
   userName,
+  avatar,
   onComplete,
 }: {
   userName: string;
+  avatar: string | null;
   onComplete: () => void;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -129,7 +132,7 @@ export function CraftScreen({
           <span className="text-sm font-semibold tracking-tighter text-foreground">
             Cue
           </span>
-          <span className="text-xs text-muted">New intention</span>
+          <ProfileMenu avatar={avatar} />
         </div>
       </header>
 

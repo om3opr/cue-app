@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { SignOutButton } from "../sign-out-button";
+import { ProfileMenu } from "../profile-menu";
 
 type Intention = {
   id: string;
@@ -28,6 +28,7 @@ export function CardScreen({
   checkedInToday,
   todayResult,
   canGraduate,
+  avatar,
   onCheckIn,
 }: {
   intention: Intention;
@@ -39,6 +40,7 @@ export function CardScreen({
   checkedInToday: boolean;
   todayResult: string | null;
   canGraduate: boolean;
+  avatar: string | null;
   onCheckIn: () => void;
 }) {
   const [submitting, setSubmitting] = useState<string | null>(null);
@@ -98,7 +100,7 @@ export function CardScreen({
             <span className="text-sm font-semibold tracking-tighter text-foreground">
               Cue
             </span>
-            <SignOutButton />
+            <ProfileMenu avatar={avatar} />
           </div>
         </header>
 
@@ -193,7 +195,7 @@ export function CardScreen({
           <span className="text-sm font-semibold tracking-tighter text-foreground">
             Cue
           </span>
-          <SignOutButton />
+          <ProfileMenu avatar={avatar} />
         </div>
       </header>
 
