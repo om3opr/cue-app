@@ -8,7 +8,9 @@ const supabase = createClient(
   process.env.SUPABASE_SECRET_KEY ?? ""
 );
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export async function GET(request: Request) {
@@ -26,7 +28,7 @@ export async function GET(request: Request) {
     .select("id, user_id, when_trigger, then_action")
     .eq("status", "active");
 
-  if (!intentions?.length) {
+  if (!intentions?.length || !resend) {
     return NextResponse.json({ sent: 0 });
   }
 
