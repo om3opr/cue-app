@@ -8,7 +8,7 @@ const supabase = createClient(
 );
 
 export async function POST(request: Request) {
-  const { result, token } = await request.json();
+  const { result, token, localDate } = await request.json();
 
   if (!["fired", "missed", "not_encountered"].includes(result)) {
     return NextResponse.json({ error: "Invalid result" }, { status: 400 });
@@ -22,12 +22,17 @@ export async function POST(request: Request) {
     );
   }
 
+  // Use client's local date to avoid UTC timezone mismatch
+  const todayStr = localDate && /^\d{4}-\d{2}-\d{2}$/.test(localDate)
+    ? localDate
+    : new Date().toISOString().split("T")[0];
+
   const { data, error } = await supabase
     .from("events")
     .insert({
       intention_id: payload.intentionId,
       user_id: payload.userId,
-      date: new Date().toISOString().split("T")[0],
+      date: todayStr,
       result,
     })
     .select()

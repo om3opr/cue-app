@@ -63,7 +63,10 @@ export function App({ user }: { user: { id: string; name: string; avatar: string
   });
 
   const fetchData = useCallback(async () => {
-    const res = await fetch("/api/intentions");
+    const localDate = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local tz
+    const res = await fetch("/api/intentions", {
+      headers: { "x-local-date": localDate },
+    });
     const json = await res.json();
     setData(json);
     setLoading(false);

@@ -22,7 +22,7 @@ function CheckInContent() {
     fetch("/api/check", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ result, token }),
+      body: JSON.stringify({ result, token, localDate: new Date().toLocaleDateString("en-CA") }),
     })
       .then((res) => {
         setStatus(res.ok ? "success" : "error");

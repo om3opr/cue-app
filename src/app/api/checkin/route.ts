@@ -13,8 +13,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { intention_id, result } = await request.json();
-  const todayStr = new Date().toISOString().split("T")[0];
+  const { intention_id, result, localDate } = await request.json();
+  // Use client's local date to avoid UTC timezone mismatch
+  const todayStr = localDate && /^\d{4}-\d{2}-\d{2}$/.test(localDate)
+    ? localDate
+    : new Date().toISOString().split("T")[0];
 
   // Insert the event
   const { data, error } = await supabase

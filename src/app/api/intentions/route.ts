@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { getStreakDisplay } from "@/lib/streaks";
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -40,8 +40,11 @@ export async function GET() {
       (e) => e.date >= fourteenDaysAgo.toISOString().split("T")[0]
     ) ?? [];
 
-  // Check if already checked in today
-  const today = new Date().toISOString().split("T")[0];
+  // Use client's local date to avoid UTC timezone mismatch
+  const clientDate = request.headers.get("x-local-date");
+  const today = clientDate && /^\d{4}-\d{2}-\d{2}$/.test(clientDate)
+    ? clientDate
+    : new Date().toISOString().split("T")[0];
   const todayEvent = recentEvents.find((e) => e.date === today);
 
   // Calculate fire rate (last 7 days)
