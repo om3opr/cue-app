@@ -220,10 +220,11 @@ export function CardScreen({
     result: "fired" | "missed" | "not_encountered"
   ) => {
     setSubmitting(result);
+    const localDate = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local tz
     const res = await fetch("/api/checkin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ intention_id: intention.id, result }),
+      body: JSON.stringify({ intention_id: intention.id, result, localDate }),
     });
     const data = await res.json();
 
@@ -537,9 +538,11 @@ export function CardScreen({
                   day streak
                 </span>
               </div>
-              <p className="text-[10px] text-muted/60 mt-0.5">
-                best: {streak.longest}
-              </p>
+              {streak.longest > 0 && (
+                <p className="text-[10px] text-muted/60 mt-0.5">
+                  best: {streak.longest}
+                </p>
+              )}
             </div>
             {fireRate !== null && (
               <div className="text-right">
@@ -559,126 +562,7 @@ export function CardScreen({
             )}
           </div>
 
-          {/* Intention card */}
-          <div className="rounded-2xl border border-border bg-surface p-6 space-y-5 shadow-sm">
-            <div>
-              <span className="text-[10px] uppercase tracking-[0.15em] text-muted font-medium">
-                When
-              </span>
-              <p className="text-base mt-1.5 leading-snug text-foreground font-medium">
-                {intention.when_trigger}
-              </p>
-            </div>
-            <div className="h-px bg-border" />
-            <div>
-              <span className="text-[10px] uppercase tracking-[0.15em] text-muted font-medium">
-                Then
-              </span>
-              <p className="text-base mt-1.5 leading-snug text-foreground font-medium">
-                {intention.then_action}
-              </p>
-            </div>
-            <div className="h-px bg-border" />
-            <div>
-              <span className="text-[10px] uppercase tracking-[0.15em] text-muted font-medium">
-                Why
-              </span>
-              <p className="text-sm mt-1.5 leading-relaxed text-muted">
-                {intention.why_rationale}
-              </p>
-            </div>
-          </div>
-
-          {/* 14-day visualization */}
-          <div>
-            <div className="flex items-center justify-between px-1">
-              {Array.from({ length: 14 }).map((_, i) => {
-                const date = new Date();
-                date.setDate(date.getDate() - (13 - i));
-                const dateStr = date.toISOString().split("T")[0];
-                const event = events.find((e) => e.date === dateStr);
-                const isToday = i === 13;
-
-                return (
-                  <div key={i} className="flex flex-col items-center gap-1.5">
-                    <motion.div
-                      initial={false}
-                      animate={{
-                        scale: event?.result === "fired" ? 1 : 0.65,
-                        opacity: event ? 1 : 0.12,
-                      }}
-                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                      className={`h-2.5 w-2.5 rounded-full ${
-                        !event
-                          ? "bg-foreground"
-                          : event.result === "fired"
-                            ? "bg-foreground"
-                            : event.result === "missed"
-                              ? "bg-foreground/30"
-                              : "bg-foreground/10"
-                      }`}
-                    />
-                    {(i === 0 || i === 7 || i === 13) && (
-                      <span
-                        className={`text-[8px] tabular-nums ${
-                          isToday ? "text-foreground font-medium" : "text-muted/30"
-                        }`}
-                      >
-                        {isToday
-                          ? "today"
-                          : date.toLocaleDateString("en", { month: "short", day: "numeric" })}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Progress toward graduation */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] uppercase tracking-[0.15em] text-muted font-medium">
-                Progress
-              </p>
-              <p className="text-[10px] text-muted/60">
-                {progressMessage}
-              </p>
-            </div>
-            <div className="h-1.5 rounded-full bg-border/50 overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{
-                  width: `${Math.min(progressPercent, fireRatePercent)}%`,
-                }}
-                transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="h-full rounded-full bg-foreground/70"
-              />
-            </div>
-            <div className="flex justify-between text-[9px] text-muted/40">
-              <span>{progress.daysCompleted}/{progress.daysRequired} days</span>
-              <span>{progress.fireRateCurrent}%/{progress.fireRateRequired}% fire rate</span>
-            </div>
-          </div>
-
-          {/* Weekly insight */}
-          {insight && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="rounded-xl border border-border/50 bg-surface/50 px-4 py-3"
-            >
-              <p className="text-[10px] uppercase tracking-[0.15em] text-muted/60 font-medium mb-1">
-                Weekly insight
-              </p>
-              <p className="text-xs text-muted leading-relaxed">
-                {insight}
-              </p>
-            </motion.div>
-          )}
-
-          {/* Check-in area */}
+          {/* Check-in area — ABOVE the card so it's visible without scrolling on mobile */}
           <AnimatePresence mode="wait">
             {!checkedInToday && !celebration ? (
               <motion.div
@@ -819,6 +703,116 @@ export function CardScreen({
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* 14-day visualization */}
+          <div>
+            <div className="flex items-center justify-between px-1">
+              {Array.from({ length: 14 }).map((_, i) => {
+                const date = new Date();
+                date.setDate(date.getDate() - (13 - i));
+                const dateStr = date.toLocaleDateString("en-CA");
+                const event = events.find((e) => e.date === dateStr);
+                const isToday = i === 13;
+
+                return (
+                  <div key={i} className="flex flex-col items-center gap-1.5">
+                    <motion.div
+                      initial={false}
+                      animate={{
+                        scale: event?.result === "fired" ? 1 : 0.65,
+                        opacity: event ? 1 : 0.12,
+                      }}
+                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                      className={`h-2.5 w-2.5 rounded-full ${
+                        !event
+                          ? "bg-foreground"
+                          : event.result === "fired"
+                            ? "bg-foreground"
+                            : event.result === "missed"
+                              ? "bg-foreground/30"
+                              : "bg-foreground/10"
+                      }`}
+                    />
+                    {(i === 0 || i === 7 || i === 13) && (
+                      <span
+                        className={`text-[8px] tabular-nums ${
+                          isToday ? "text-foreground font-medium" : "text-muted/30"
+                        }`}
+                      >
+                        {isToday
+                          ? "today"
+                          : date.toLocaleDateString("en", { month: "short", day: "numeric" })}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Progress toward graduation */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] uppercase tracking-[0.15em] text-muted font-medium">
+                Progress
+              </p>
+              <p className="text-[10px] text-muted/60">
+                {progressMessage}
+              </p>
+            </div>
+            <div className="h-1.5 rounded-full bg-border/50 overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{
+                  width: `${Math.min(progressPercent, fireRatePercent)}%`,
+                }}
+                transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="h-full rounded-full bg-foreground/70"
+              />
+            </div>
+            <div className="flex justify-between text-[9px] text-muted/40">
+              <span>{progress.daysCompleted}/{progress.daysRequired} days</span>
+              <span>{progress.fireRateCurrent}%/{progress.fireRateRequired}% fire rate</span>
+            </div>
+          </div>
+
+          {/* Intention card — below the fold, for reference */}
+          <div className="rounded-2xl border border-border bg-surface p-5 space-y-4 shadow-sm">
+            <div>
+              <span className="text-[10px] uppercase tracking-[0.15em] text-muted font-medium">
+                When
+              </span>
+              <p className="text-sm mt-1 leading-snug text-foreground font-medium">
+                {intention.when_trigger}
+              </p>
+            </div>
+            <div className="h-px bg-border" />
+            <div>
+              <span className="text-[10px] uppercase tracking-[0.15em] text-muted font-medium">
+                Then
+              </span>
+              <p className="text-sm mt-1 leading-snug text-foreground font-medium">
+                {intention.then_action}
+              </p>
+            </div>
+          </div>
+
+          {/* Weekly insight */}
+          {insight && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="rounded-xl border border-border/50 bg-surface/50 px-4 py-3"
+            >
+              <p className="text-[10px] uppercase tracking-[0.15em] text-muted/60 font-medium mb-1">
+                Weekly insight
+              </p>
+              <p className="text-xs text-muted leading-relaxed">
+                {insight}
+              </p>
+            </motion.div>
+          )}
         </motion.div>
       </main>
     </div>

@@ -32,8 +32,30 @@ export function CraftScreen({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+
   useEffect(() => {
     inputRef.current?.focus();
+  }, []);
+
+  // Track visual viewport to handle mobile keyboard
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const onResize = () => {
+      // When keyboard opens, visualViewport.height shrinks
+      // Calculate the offset from the bottom of the layout viewport
+      const offset = window.innerHeight - vv.height - vv.offsetTop;
+      setKeyboardOffset(Math.max(0, offset));
+    };
+
+    vv.addEventListener("resize", onResize);
+    vv.addEventListener("scroll", onResize);
+    return () => {
+      vv.removeEventListener("resize", onResize);
+      vv.removeEventListener("scroll", onResize);
+    };
   }, []);
 
   const [multiline, setMultiline] = useState(false);
@@ -236,7 +258,10 @@ export function CraftScreen({
 
       {/* Input — clean single-line */}
       {!intention && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background to-transparent pt-8 pb-[env(safe-area-inset-bottom,12px)]">
+        <div
+          className="fixed left-0 right-0 bg-gradient-to-t from-background via-background to-transparent pt-8 pb-[env(safe-area-inset-bottom,12px)]"
+          style={{ bottom: keyboardOffset > 0 ? `${keyboardOffset}px` : 0 }}
+        >
           <div className="max-w-lg mx-auto px-5 pb-4">
             <div className={`flex items-center gap-3 border border-border bg-surface px-5 py-2.5 transition-all duration-200 focus-within:border-foreground/20 ${multiline ? "rounded-2xl" : "rounded-full"}`}>
               <textarea

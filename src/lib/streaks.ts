@@ -22,16 +22,14 @@ export type StreakState = {
 
 const MILESTONES = [3, 7, 14, 21, 30, 60, 90];
 
-function getMondayOfWeek(date: Date): string {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  return d.toISOString().split("T")[0];
-}
-
-function getDateStr(d: Date): string {
-  return d.toISOString().split("T")[0];
+function getMondayOfWeek(dateStr: string): string {
+  // Parse YYYY-MM-DD without timezone conversion
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  date.setDate(diff);
+  return date.toLocaleDateString("en-CA"); // YYYY-MM-DD
 }
 
 function daysBetween(a: string, b: string): number {
@@ -86,10 +84,9 @@ export function updateStreakAfterCheckin(
   }
 
   // Reset freeze on Monday
-  const today = new Date(todayStr);
-  const currentMonday = getMondayOfWeek(today);
+  const currentMonday = getMondayOfWeek(todayStr);
   if (freezeUsedDate) {
-    const freezeMonday = getMondayOfWeek(new Date(freezeUsedDate));
+    const freezeMonday = getMondayOfWeek(freezeUsedDate);
     if (currentMonday !== freezeMonday) {
       freezeAvailable = true;
       freezeUsedDate = null;

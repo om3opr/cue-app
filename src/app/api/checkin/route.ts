@@ -76,10 +76,13 @@ export async function POST(request: Request) {
   if (result === "not_encountered")
     counterUpdate.total_not_encountered = (stats?.total_not_encountered ?? 0) + 1;
 
+  // Remove justHitMilestone — it's not a DB column
+  const { justHitMilestone, ...streakDbFields } = streakUpdate;
+
   await supabase
     .from("user_stats")
     .update({
-      ...streakUpdate,
+      ...streakDbFields,
       ...counterUpdate,
     })
     .eq("user_id", user.id);
@@ -88,7 +91,7 @@ export async function POST(request: Request) {
   const celebration = getRandomCelebration(
     result,
     streakUpdate.current_streak,
-    streakUpdate.justHitMilestone
+    justHitMilestone
   );
 
   return NextResponse.json({
