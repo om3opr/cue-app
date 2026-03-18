@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CraftScreen } from "./screens/craft";
 import { CardScreen } from "./screens/card";
+import { OnboardingScreen } from "./screens/onboarding";
 
 type Intention = {
   id: string;
@@ -20,6 +21,23 @@ type EventData = {
   result: "fired" | "missed" | "not_encountered";
 };
 
+type StreakData = {
+  current: number;
+  longest: number;
+  freezeAvailable: boolean;
+  freezeUsedToday: boolean;
+  milestone: number | null;
+  nextMilestone: number;
+};
+
+type ProgressData = {
+  daysCompleted: number;
+  daysRequired: number;
+  fireRateCurrent: number;
+  fireRateRequired: number;
+  trend: "up" | "down" | "stable";
+};
+
 type IntentionData = {
   intention: Intention | null;
   events: EventData[];
@@ -30,11 +48,19 @@ type IntentionData = {
   checkedInToday: boolean;
   todayResult: string | null;
   canGraduate: boolean;
+  streak: StreakData;
+  progress: ProgressData;
+  insight: string | null;
+  shouldOfferReflection: boolean;
 };
 
 export function App({ user }: { user: { id: string; name: string; avatar: string | null } }) {
   const [data, setData] = useState<IntentionData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [onboarded, setOnboarded] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("cue_onboarded") === "true";
+  });
 
   const fetchData = useCallback(async () => {
     const res = await fetch("/api/intentions");
@@ -57,6 +83,15 @@ export function App({ user }: { user: { id: string; name: string; avatar: string
         >
           Cue
         </motion.div>
+      </div>
+    );
+  }
+
+  // Show onboarding for new users without an intention
+  if (!onboarded && !data?.intention) {
+    return (
+      <div className="min-h-svh bg-background">
+        <OnboardingScreen onComplete={() => setOnboarded(true)} />
       </div>
     );
   }
@@ -92,6 +127,10 @@ export function App({ user }: { user: { id: string; name: string; avatar: string
               checkedInToday={data.checkedInToday}
               todayResult={data.todayResult}
               canGraduate={data.canGraduate}
+              streak={data.streak}
+              progress={data.progress}
+              insight={data.insight}
+              shouldOfferReflection={data.shouldOfferReflection}
               avatar={user.avatar}
               onCheckIn={fetchData}
             />

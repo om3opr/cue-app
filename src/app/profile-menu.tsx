@@ -4,7 +4,15 @@ import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
-export function ProfileMenu({ avatar }: { avatar: string | null }) {
+export function ProfileMenu({
+  avatar,
+  onEditIntention,
+  onStartOver,
+}: {
+  avatar: string | null;
+  onEditIntention?: () => void;
+  onStartOver?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -46,7 +54,35 @@ export function ProfileMenu({ avatar }: { avatar: string | null }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-9 w-36 rounded-xl border border-border bg-surface shadow-lg overflow-hidden z-50">
+        <div className="absolute right-0 top-9 w-40 rounded-xl border border-border bg-surface shadow-lg overflow-hidden z-50">
+          {onEditIntention && (
+            <>
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  onEditIntention();
+                }}
+                className="w-full text-left px-4 py-2.5 text-xs text-foreground/70 hover:bg-foreground/5 transition-colors cursor-pointer"
+              >
+                Edit intention
+              </button>
+              <div className="h-px bg-border" />
+            </>
+          )}
+          {onStartOver && (
+            <>
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  onStartOver();
+                }}
+                className="w-full text-left px-4 py-2.5 text-xs text-foreground/70 hover:bg-foreground/5 transition-colors cursor-pointer"
+              >
+                Start over
+              </button>
+              <div className="h-px bg-border" />
+            </>
+          )}
           <a
             href="/about"
             className="block px-4 py-2.5 text-xs text-foreground/70 hover:bg-foreground/5 transition-colors"

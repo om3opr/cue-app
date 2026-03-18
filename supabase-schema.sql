@@ -44,3 +44,46 @@ create policy "Users can read own events"
 
 create policy "Users can insert own events"
   on events for insert with check (auth.uid() = user_id);
+
+-- User stats for streak tracking
+create table user_stats (
+  user_id uuid references auth.users(id) on delete cascade primary key,
+  current_streak int default 0,
+  longest_streak int default 0,
+  last_checkin_date date,
+  streak_freeze_available boolean default true,
+  streak_freeze_used_date date,
+  total_fired int default 0,
+  total_missed int default 0,
+  total_not_encountered int default 0,
+  created_at timestamptz default now()
+);
+
+alter table user_stats enable row level security;
+
+create policy "Users can read own stats"
+  on user_stats for select using (auth.uid() = user_id);
+
+create policy "Users can insert own stats"
+  on user_stats for insert with check (auth.uid() = user_id);
+
+create policy "Users can update own stats"
+  on user_stats for update using (auth.uid() = user_id);
+
+-- Weekly AI insights
+create table insights (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  intention_id uuid references intentions(id) on delete cascade not null,
+  content text not null,
+  week_start date not null,
+  created_at timestamptz default now()
+);
+
+alter table insights enable row level security;
+
+create policy "Users can read own insights"
+  on insights for select using (auth.uid() = user_id);
+
+create policy "Service can insert insights"
+  on insights for insert with check (true);

@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { updateStreakAfterCheckin } from "@/lib/streaks";
+import { getRandomCelebration } from "@/lib/celebrations";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -12,13 +14,15 @@ export async function POST(request: Request) {
   }
 
   const { intention_id, result } = await request.json();
+  const todayStr = new Date().toISOString().split("T")[0];
 
+  // Insert the event
   const { data, error } = await supabase
     .from("events")
     .insert({
       intention_id,
       user_id: user.id,
-      date: new Date().toISOString().split("T")[0],
+      date: todayStr,
       result,
     })
     .select()
@@ -34,5 +38,63 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  return NextResponse.json({ event: data });
+  // Fetch or create user_stats
+  let { data: stats } = await supabase
+    .from("user_stats")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!stats) {
+    const { data: newStats } = await supabase
+      .from("user_stats")
+      .insert({ user_id: user.id })
+      .select()
+      .single();
+    stats = newStats;
+  }
+
+  // Update streak
+  const streakUpdate = updateStreakAfterCheckin(
+    {
+      current_streak: stats?.current_streak ?? 0,
+      longest_streak: stats?.longest_streak ?? 0,
+      last_checkin_date: stats?.last_checkin_date ?? null,
+      streak_freeze_available: stats?.streak_freeze_available ?? true,
+      streak_freeze_used_date: stats?.streak_freeze_used_date ?? null,
+    },
+    todayStr
+  );
+
+  // Update counters
+  const counterUpdate: Record<string, number> = {};
+  if (result === "fired") counterUpdate.total_fired = (stats?.total_fired ?? 0) + 1;
+  if (result === "missed") counterUpdate.total_missed = (stats?.total_missed ?? 0) + 1;
+  if (result === "not_encountered")
+    counterUpdate.total_not_encountered = (stats?.total_not_encountered ?? 0) + 1;
+
+  await supabase
+    .from("user_stats")
+    .update({
+      ...streakUpdate,
+      ...counterUpdate,
+    })
+    .eq("user_id", user.id);
+
+  // Generate celebration
+  const celebration = getRandomCelebration(
+    result,
+    streakUpdate.current_streak,
+    streakUpdate.justHitMilestone
+  );
+
+  return NextResponse.json({
+    event: data,
+    streak: {
+      current: streakUpdate.current_streak,
+      longest: streakUpdate.longest_streak,
+      justHitMilestone: streakUpdate.justHitMilestone,
+    },
+    celebration,
+  });
 }

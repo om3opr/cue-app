@@ -13,8 +13,25 @@ const resend = process.env.RESEND_API_KEY
   : null;
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
+const subjectTemplates = [
+  (streak: number, trigger: string) =>
+    streak > 0 ? `Day ${streak + 1} — keep it going` : `Your trigger is waiting`,
+  (_streak: number, trigger: string) =>
+    `When ${trigger.slice(0, 30)}${trigger.length > 30 ? "..." : ""}`,
+  (streak: number) =>
+    streak > 2
+      ? `${streak} days strong. Make it ${streak + 1}.`
+      : "Did it fire today?",
+  () => "Quick check-in",
+];
+
+const missedSubjects = [
+  "Never miss twice. Today matters most.",
+  "Yesterday was a miss. Today is a fresh trigger.",
+  "One miss is noise. Two is a pattern. Show up today.",
+];
+
 export async function GET(request: Request) {
-  // Verify cron secret
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -22,7 +39,6 @@ export async function GET(request: Request) {
 
   const today = new Date().toISOString().split("T")[0];
 
-  // Get all active intentions where user hasn't checked in today
   const { data: intentions } = await supabase
     .from("intentions")
     .select("id, user_id, when_trigger, then_action")
@@ -32,7 +48,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ sent: 0 });
   }
 
-  // Get today's events to filter out users who already checked in
   const { data: todayEvents } = await supabase
     .from("events")
     .select("intention_id")
@@ -49,7 +64,6 @@ export async function GET(request: Request) {
   let sent = 0;
 
   for (const intention of needsReminder) {
-    // Get user email
     const { data: userData } = await supabase.auth.admin.getUserById(
       intention.user_id
     );
@@ -57,20 +71,65 @@ export async function GET(request: Request) {
     const email = userData?.user?.email;
     if (!email) continue;
 
+    // Get streak and yesterday's result for personalization
+    const { data: stats } = await supabase
+      .from("user_stats")
+      .select("current_streak, last_checkin_date")
+      .eq("user_id", intention.user_id)
+      .single();
+
+    const currentStreak = stats?.current_streak ?? 0;
+
+    // Check yesterday's result
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+    const { data: yesterdayEvent } = await supabase
+      .from("events")
+      .select("result")
+      .eq("intention_id", intention.id)
+      .eq("date", yesterdayStr)
+      .single();
+
+    const missedYesterday = yesterdayEvent?.result === "missed";
+
+    // Pick subject
+    let subject: string;
+    if (missedYesterday) {
+      subject = missedSubjects[Math.floor(Math.random() * missedSubjects.length)];
+    } else {
+      const template = subjectTemplates[Math.floor(Math.random() * subjectTemplates.length)];
+      subject = template(currentStreak, intention.when_trigger);
+    }
+
     const token = await createCheckinToken(intention.id, intention.user_id);
 
     const firedUrl = `${appUrl}/check?r=fired&t=${token}`;
     const missedUrl = `${appUrl}/check?r=missed&t=${token}`;
     const skipUrl = `${appUrl}/check?r=not_encountered&t=${token}`;
 
+    // Streak line for email body
+    const streakLine =
+      currentStreak > 0
+        ? `<p style="font-size: 13px; color: #737373; margin: 0 0 20px 0;">🔥 ${currentStreak} day streak</p>`
+        : "";
+
+    // Never-miss-twice line
+    const missLine = missedYesterday
+      ? `<p style="font-size: 13px; color: #737373; margin: 0 0 16px 0; font-style: italic;">Yesterday was a miss. Today is what matters.</p>`
+      : "";
+
     try {
       await resend.emails.send({
         from: "Cue <reminder@cue.app>",
         to: email,
-        subject: "Did it fire?",
+        subject,
         html: `
           <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 400px; margin: 0 auto; padding: 40px 20px;">
             <p style="font-size: 13px; color: #737373; margin: 0 0 24px 0; letter-spacing: 0.05em; text-transform: uppercase;">Cue</p>
+
+            ${streakLine}
+            ${missLine}
 
             <p style="font-size: 15px; color: #0a0a0a; margin: 0 0 4px 0; font-weight: 600;">When ${intention.when_trigger}</p>
             <p style="font-size: 15px; color: #0a0a0a; margin: 0 0 24px 0; font-weight: 600;">Then ${intention.then_action}</p>
